@@ -1,4 +1,4 @@
-package testpackage.pdf;
+package ru.invitro.testing.basis.framework.pdf;
 
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
@@ -6,22 +6,16 @@ import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
 import com.itextpdf.text.pdf.parser.TextExtractionStrategy;
 import net.serenitybdd.core.Serenity;
 import net.serenitybdd.core.pages.PageObject;
-import net.serenitybdd.core.pages.WebElementFacade;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.pdf.PDFParser;
 import org.apache.tika.parser.pdf.PDFParserConfig;
 import org.apache.tika.sax.BodyContentHandler;
-import org.junit.Assert;
-import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.FindBys;
 import org.xml.sax.SAXException;
-import testpackage.driver.CustomChromeDriver;
-import testpackage.logs.SavedData;
-import testpackage.pages.MainPage;
-import testpackage.pages.armps2.ChromeDownloadPage;
+import ru.invitro.testing.basis.framework.page.ChromeDownloadPage;
+import ru.invitro.testing.basis.framework.savedata.SavedData;
+
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,28 +25,24 @@ import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class Pdf extends PageObject {
+public abstract class Pdf extends PageObject {
 
     private static final ConcurrentHashMap<Long, String> parseResults = new ConcurrentHashMap<>(); //результат обработки PDF для каждого потока
 
     private static final ConcurrentHashMap<Long, Path> pdfFiles = new ConcurrentHashMap<>(); //путь к последнему прочитанному PDF для каждого потока
 
     ChromeDownloadPage chromeDownloadPage;
+    String chromeDownloadPath = "C:\\chrome\\";
 
-    MainPage mainPage;
-
-    @FindBy(xpath = "//button[@id='open-button']")
-    WebElementFacade download;
-
-    @FindBys({@FindBy(xpath = "//button[.='Печать']/../../descendant-or-self::button")}) // Кнопки на странице печать бланка
-    List<WebElementFacade> textStrings;
+    public void setChromeDownloadPath(String chromeDownloadPath) {
+        this.chromeDownloadPath = chromeDownloadPath;
+    }
 
     /**
      * Метод возвращает путь к последнему прочитанному PDF файлу для текущего потока
@@ -98,26 +88,11 @@ public class Pdf extends PageObject {
      *                      false - порядок строк текста будет зависеть от Y координат строки на листе
      */
     public void readPdf(boolean useTikaParser) {
-        for (int i = 0; i < 4; i++) {
-            try {
-                getDriver().switchTo()
-                           .frame(i);
-                download.withTimeoutOf(20, ChronoUnit.SECONDS)
-                        .waitUntilClickable();
-                download.click();
-                waitABit(10000);
-                getDriver().switchTo()
-                           .defaultContent();
-                break;
-            } catch (WebDriverException e) {
-                System.out.println("Кнопка загрузки PDF отсутствует");
-            } finally {
-                getDriver().switchTo()
-                           .defaultContent();
-            }
-        }
+        downloadPdf();
         parsePdf(useTikaParser);
     }
+
+    public abstract void downloadPdf();
 
 
     /**
@@ -129,7 +104,7 @@ public class Pdf extends PageObject {
      */
     public void parsePdf(boolean useTikaParser) {
         String filename = chromeDownloadPage.getLastDowloadedFile();
-        String fullFilename = CustomChromeDriver.downLoadPath + filename;
+        String fullFilename = chromeDownloadPath + filename;
         setPdfPath(new File(fullFilename).toPath());
         try {
             Serenity.recordReportData()
@@ -184,28 +159,6 @@ public class Pdf extends PageObject {
         }
     }
 
-    /**
-     * Метод проверяет отображение на странице кнопки Скачать
-     *
-     * @return true если кнопка видна
-     */
-    public boolean pdfDownloadButtonIsVisible() {
-        try {
-            waitABit(2000);
-            getDriver().switchTo()
-                       .frame(0);
-            download.withTimeoutOf(20, ChronoUnit.SECONDS)
-                    .waitUntilVisible();
-            getDriver().switchTo()
-                       .defaultContent();
-            return true;
-        } catch (WebDriverException e) {
-            System.out.println("Кнопка загрузки PDF отсутствует");
-            getDriver().switchTo()
-                       .defaultContent();
-            return false;
-        }
-    }
 
     /**
      * Разбивает результат чтения PDF на бланки
@@ -359,7 +312,7 @@ public class Pdf extends PageObject {
     /**
      * Метод извлекает список ИНЗ из PDF файла
      *
-     * @return List<String> список ИНЗ
+     * @return List(String) список ИНЗ
      */
     public List<String> getInz() {
         List<String> result = new ArrayList<>();
@@ -388,7 +341,7 @@ public class Pdf extends PageObject {
     /**
      * Метод извлекает список ИНЛ из PDF файла
      *
-     * @return List<String> список ИНЛ
+     * @return List(String) список ИНЛ
      */
     public List<String> getIln() {
         List<String> result = new ArrayList<>();
@@ -405,7 +358,7 @@ public class Pdf extends PageObject {
     /**
      * Метод извлекает тип и код пробирок
      *
-     * @return Map<String, String> где key - это код пробирки, а value - тип
+     * @return Map(String, String) где key - это код пробирки, а value - тип
      */
     public Map<String, String> getTubeType() {
         Map<String, String> tubes = new HashMap<>();
@@ -447,7 +400,7 @@ public class Pdf extends PageObject {
      * Метод возвращает бланки, на которых есть все указанные строки
      *
      * @param stringsForSearch Список строк для поиска
-     * @return List<String> бланки, на которых есть все указанные строки
+     * @return List(String) бланки, на которых есть все указанные строки
      */
     public List<String> blanksWithStrings(List<String> stringsForSearch) {
         return splitByBlank().stream()
@@ -496,7 +449,7 @@ public class Pdf extends PageObject {
     /**
      * Метод извлекает номера контейнеров из PDF файла
      *
-     * @return List<String> номера контейнеров
+     * @return List(String) номера контейнеров
      */
     public List<String> getContainers() {
         List<String> result = new ArrayList<>();
@@ -514,7 +467,7 @@ public class Pdf extends PageObject {
     /**
      * Метод извлекает ИНЛ и количество контейнеров
      *
-     * @return Map<String, String> где key - это ИНЛ, а value - количество контейнеров
+     * @return Map(String, String) где key - это ИНЛ, а value - количество контейнеров
      */
     public Map<String, String> getInlAndContainers() {
         Map<String, String> result = new HashMap<>();
@@ -528,20 +481,6 @@ public class Pdf extends PageObject {
         return result;
     }
 
-    /**
-     * Ожидание отображения кнопки Загрузить
-     */
-    public void longWaitUntilDownloadButtonIsVisible() {
-        try {
-            getDriver().switchTo()
-                       .frame(0);
-            download.withTimeoutOf(5, ChronoUnit.MINUTES)
-                    .waitUntilClickable();
-        } finally {
-            getDriver().switchTo()
-                       .defaultContent();
-        }
-    }
 
     /**
      * @return количество бланков в PDF
@@ -561,7 +500,8 @@ public class Pdf extends PageObject {
     /**
      * Метод извлекает ИНЗ по тесту
      *
-     * @return Map<String, List < String>> где key - это название теста, а value - список ИНЗ этого теста
+     * @param tests - список тестов
+     * @return Map(String, List (String)) где key - это название теста, а value - список ИНЗ этого теста
      */
     public Map<String, List<String>> getInzByTests(List<String> tests) {
         Map<String, List<String>> result = new HashMap<>();
@@ -577,7 +517,7 @@ public class Pdf extends PageObject {
     /**
      * Метод извлекает дату готовности продуктов из бланк-сметы
      *
-     * @return Map<String, LocalDateTime> где key - продукт, а value - LocalDateTime дата готовности
+     * @return Map(String, LocalDateTime) где key - продукт, а value - LocalDateTime дата готовности
      */
     public Map<String, LocalDateTime> getSmetaResultDates() {
         Map<String, LocalDateTime> result = new HashMap<>();
@@ -597,26 +537,9 @@ public class Pdf extends PageObject {
     }
 
     /**
-     * Метод проверяет что кнопка с указанным названием отображается на экране
-     *
-     * @param stringOnPage название кнопки
-     * @return true - если кнопка отображается на экране
-     */
-    public Boolean buttonPrint(String stringOnPage) {
-        Assert.assertTrue("Строки не обнаружены", mainPage.checkElementList(textStrings, 3));
-        for (WebElementFacade element : textStrings) {
-            if (element.getText()
-                       .equals(stringOnPage)) {
-                return element.isVisible();
-            }
-        }
-        return false;
-    }
-
-    /**
      * Метод извлекает список ИНЗ из бланк-сметы
      *
-     * @return Set<String> список ИНЗ
+     * @return Set(String) список ИНЗ
      */
     public Set<String> getSmetaInzs() {
         Set<String> result = new HashSet<>();

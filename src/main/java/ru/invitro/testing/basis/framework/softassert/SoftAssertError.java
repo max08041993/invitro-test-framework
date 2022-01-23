@@ -1,4 +1,4 @@
-package testpackage.softassert;
+package ru.invitro.testing.basis.framework.softassert;
 
 public class SoftAssertError {
 

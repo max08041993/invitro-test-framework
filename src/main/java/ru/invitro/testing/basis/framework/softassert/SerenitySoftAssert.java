@@ -1,12 +1,12 @@
-package testpackage.softassert;
+package ru.invitro.testing.basis.framework.softassert;
 
 import net.serenitybdd.core.Serenity;
 import net.thucydides.core.steps.StepEventBus;
 import org.assertj.core.api.AbstractAssert;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.Assert;
-import testpackage.pages.MainPage;
-import testpackage.pdf.Pdf;
+import ru.invitro.testing.basis.framework.page.BasePage;
+import ru.invitro.testing.basis.framework.pdf.Pdf;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 
 public class SerenitySoftAssert extends SoftAssertions {
 
-    MainPage page;
+    BasePage page;
 
     private static ConcurrentHashMap<Long, List<SoftAssertError>> errors = new ConcurrentHashMap<>(); //содержит все ошибки переданные в метод assertSoft всеми потоками. Ключом являе id потока.
 
@@ -31,9 +31,11 @@ public class SerenitySoftAssert extends SoftAssertions {
 
     /**
      * Вызов метода вызывает прикрепелние к отчету спика всех найденных ошибок для потока и падению теста, если такие ошибки существуют
+     *
+     * @param pageObject текущая страница
      */
 
-    public void assertAll(MainPage pageObject) {
+    public void assertAll(BasePage pageObject) {
         this.page = pageObject;
         StringBuilder sb = new StringBuilder();
         List<SoftAssertError> softErrors = errors.getOrDefault(Thread.currentThread()
@@ -73,6 +75,8 @@ public class SerenitySoftAssert extends SoftAssertions {
     /**
      * Метод принимает AbstractAssert в качестве параметра и если проверка провалена добавляет ошибку
      * в список ошибок текущего потока, изменяет имя шага отмечая его как проваленный, и добавляет в шаг сообщение об ошибке
+     *
+     * @param assert1 проверка
      */
 
     public void assertSoft(AbstractAssert assert1) {
@@ -134,6 +138,8 @@ public class SerenitySoftAssert extends SoftAssertions {
      * Метод принимает AbstractAssert в качестве параметра и если проверка провалена добавляет ошибку
      * в список ошибок текущего потока, изменяет имя шага отмечая его как проваленный, добавляет в шаг
      * сообщение об ошибке и прикрепляет к шагу PDF файл и результат его перевода в текст.
+     *
+     * @param assert1 проверка
      */
 
     public void assertPdfSoft(AbstractAssert assert1) {
@@ -209,9 +215,12 @@ public class SerenitySoftAssert extends SoftAssertions {
      * Метод принимает AbstractAssert и PageObject в качестве параметра. Если проверка провалена добавляет ошибку
      * в список ошибок текущего потока, изменяет имя шага отмечая его как проваленный, и добавляет в шаг сообщение об ошибке
      * Метод предназначен для использования SerenitySoftAssert вне классов шагов
+     *
+     * @param page    текущая страница
+     * @param assert1 проверка
      */
 
-    public void assertSoft(MainPage page, AbstractAssert assert1) {
+    public void assertSoft(BasePage page, AbstractAssert assert1) {
         this.page = page;
         assertSoft(assert1);
     }
@@ -228,9 +237,11 @@ public class SerenitySoftAssert extends SoftAssertions {
 
     /**
      * Создает HTML файл с указанным содержимым для прикрепления его к отчету
+     *
+     * @param content наполнение для файла
      */
     private Path makeFile(String content) {
-        String patternPath = "src/test/java/testpackage/softassert/assertError.html";
+        String patternPath = "src/main/java/ru/invitro/testing/basis/framework/softassert/assertError.html";
         StringBuilder patternFile = new StringBuilder();
         try (Stream<String> stream = Files.lines(Paths.get(patternPath), StandardCharsets.UTF_8)) {
             stream.forEach(s -> patternFile.append(s)
